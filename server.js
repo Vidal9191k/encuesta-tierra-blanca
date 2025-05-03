@@ -22,8 +22,10 @@ const votos = {
 
 // Conexión de cliente vía socket
 io.on('connection', (socket) => {
+  // Enviar estado actual al conectarse
   socket.emit('updateVotes', { votos });
 
+  // Al recibir un voto
   socket.on('vote', (candidato) => {
     if (typeof candidato === 'string' && votos.hasOwnProperty(candidato)) {
       votos[candidato]++;
@@ -32,13 +34,11 @@ io.on('connection', (socket) => {
   });
 });
 
-// ✅ Ruta fallback para aplicaciones de una sola página (Render lo necesita)
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public/index.html'));
-});
-
 // Inicializar servidor
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Servidor escuchando en el puerto ${PORT}`);
 });
+
+
+
