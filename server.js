@@ -22,7 +22,7 @@ if (!fs.existsSync(votosPath)) {
   fs.writeFileSync(votosPath, JSON.stringify({
     reynaldo: 0,
     juan: 0,
-    edwin: 0,
+    edwing: 0,
     olivia: 0,
     jorge: 0,
     otro: 0
