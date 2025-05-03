@@ -2,7 +2,8 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
-const requestIp = require('request-ip'); // Para obtener la IP del cliente
+const fs = require('fs');
+const requestIp = require('request-ip');
 
 const app = express();
 const server = http.createServer(app);
@@ -10,48 +11,63 @@ const io = new Server(server);
 
 // Middleware para detectar IP del cliente
 app.use(requestIp.mw());
-
-// Servir archivos estáticos desde la carpeta "public"
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Objeto de votos por candidato
-const votos = {
-  reynaldo: 0,
-  juan: 0,
-  edwin: 0,
-  olivia: 0,
-  jorge: 0,
-  otro: 0
-};
+// Archivos para persistencia
+const votosPath = path.join(__dirname, 'votos.json');
+const ipsPath = path.join(__dirname, 'ips.json');
 
-// Lista de IPs que ya votaron
-const ipsQueVotaron = new Set();
+// Inicializar datos si no existen
+if (!fs.existsSync(votosPath)) {
+  fs.writeFileSync(votosPath, JSON.stringify({
+    reynaldo: 0,
+    juan: 0,
+    edwin: 0,
+    olivia: 0,
+    jorge: 0,
+    otro: 0
+  }, null, 2));
+}
 
-// Conexión de cliente vía socket
+if (!fs.existsSync(ipsPath)) {
+  fs.writeFileSync(ipsPath, JSON.stringify([]));
+}
+
+const getVotos = () => JSON.parse(fs.readFileSync(votosPath));
+const getIps = () => new Set(JSON.parse(fs.readFileSync(ipsPath)));
+
+const guardarVotos = (votos) =>
+  fs.writeFileSync(votosPath, JSON.stringify(votos, null, 2));
+const guardarIps = (ipsSet) =>
+  fs.writeFileSync(ipsPath, JSON.stringify([...ipsSet], null, 2));
+
 io.on('connection', (socket) => {
-  // Detectar IP del cliente
   const ip = socket.handshake.headers['x-forwarded-for'] || socket.handshake.address;
+  const votos = getVotos();
+  const ips = getIps();
 
-  // Enviar estado actual al conectarse
   socket.emit('updateVotes', { votos });
 
-  // Al recibir un voto
   socket.on('vote', (candidato) => {
-    if (ipsQueVotaron.has(ip)) {
+    if (ips.has(ip)) {
       console.log(`Voto duplicado bloqueado para IP: ${ip}`);
       return;
     }
 
     if (typeof candidato === 'string' && votos.hasOwnProperty(candidato)) {
       votos[candidato]++;
-      ipsQueVotaron.add(ip);
+      ips.add(ip);
+
+      guardarVotos(votos);
+      guardarIps(ips);
+
       io.emit('updateVotes', { votos });
     }
   });
 });
 
-// Inicializar servidor
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Servidor escuchando en el puerto ${PORT}`);
 });
+
