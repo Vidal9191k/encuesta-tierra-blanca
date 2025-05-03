@@ -22,16 +22,19 @@ const votos = {
 
 // Conexión de cliente vía socket
 io.on('connection', (socket) => {
-  // Enviar estado actual al conectarse
-  socket.emit('updateVotes', { votos });  // ✅ Enviar dentro de un objeto
+  socket.emit('updateVotes', { votos });
 
-  // Al recibir un voto
   socket.on('vote', (candidato) => {
     if (typeof candidato === 'string' && votos.hasOwnProperty(candidato)) {
       votos[candidato]++;
-      io.emit('updateVotes', { votos });  // ✅ Enviar dentro de un objeto
+      io.emit('updateVotes', { votos });
     }
   });
+});
+
+// ✅ Ruta fallback para aplicaciones de una sola página (Render lo necesita)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public/index.html'));
 });
 
 // Inicializar servidor
