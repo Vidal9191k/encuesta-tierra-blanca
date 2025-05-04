@@ -68,9 +68,15 @@ io.on('connection', (socket) => {
   });
 });
 
-// Ruta protegida (sin contraseña aún)
+// Ruta protegida para mostrar resultados
 app.get('/admin-votos-2025', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'privado', 'resultados.html'));
+});
+
+// Ruta temporal para resetear IPs
+app.get('/admin-resetear-ips', (req, res) => {
+  fs.writeFileSync(ipsPath, JSON.stringify([]));
+  res.send('IPs reseteadas. Ahora puedes volver a votar desde este dispositivo.');
 });
 
 // Iniciar servidor

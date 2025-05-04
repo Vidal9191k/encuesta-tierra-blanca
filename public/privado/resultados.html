@@ -67,6 +67,11 @@
       padding: 5px;
       border-radius: 8px;
     }
+
+    #resetear-btn {
+      background-color: red;
+      margin-top: 20px;
+    }
   </style>
 </head>
 <body>
@@ -81,11 +86,12 @@
     <h2>Resultados en tiempo real</h2>
     <div id="resultados"></div>
     <canvas id="grafico" width="400" height="400"></canvas>
+    <button id="resetear-btn" onclick="resetearIps()">🔄 Resetear IPs (Solo pruebas)</button>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
-    const PASSWORD = "miclave2025"; // ← CAMBIA esta clave si quieres otra
+    const PASSWORD = "miclave2025"; // ← CAMBIA esta clave si lo deseas
 
     function verificar() {
       const clave = document.getElementById('clave').value;
@@ -95,6 +101,18 @@
       } else {
         document.getElementById('error').textContent = 'Contraseña incorrecta';
       }
+    }
+
+    function resetearIps() {
+      fetch('/resetear-ips', { method: 'POST' })
+        .then(res => {
+          if (res.ok) {
+            alert('IPs reseteadas correctamente.');
+          } else {
+            alert('Error al resetear IPs.');
+          }
+        })
+        .catch(() => alert('Fallo la conexión con el servidor.'));
     }
 
     const socket = io({ transports: ['websocket'] });
@@ -183,4 +201,3 @@
   </script>
 </body>
 </html>
-
