@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -5,7 +7,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Encuesta Tierra Blanca</title>
   <link rel="stylesheet" href="style.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -39,7 +40,6 @@
     .contenedor {
       display: flex;
       justify-content: center;
-      align-items: flex-start;
       flex-grow: 1;
       flex-wrap: wrap;
       gap: 20px;
@@ -51,9 +51,8 @@
       padding: 20px;
       border-radius: 8px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-      flex: 1;
       min-width: 300px;
-      max-width: 400px;
+      max-width: 500px;
     }
 
     #votacion label {
@@ -86,46 +85,6 @@
       margin-top: 10px;
     }
 
-    .panel-resultados {
-      background: white;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-      flex: 1;
-      min-width: 300px;
-      max-width: 500px;
-      display: flex;
-      flex-direction: column;
-      justify-content: flex-start;
-    }
-
-    .barra {
-      margin-bottom: 20px;
-    }
-
-    .barra span {
-      font-weight: bold;
-    }
-
-    .barra-llena {
-      height: 20px;
-      border-radius: 5px;
-      margin-top: 5px;
-    }
-
-    .barra-destacada {
-      outline: 3px solid gold;
-      padding: 5px;
-      border-radius: 8px;
-    }
-
-    canvas#grafico {
-      width: 100% !important;
-      height: auto !important;
-      max-width: 400px;
-      margin-top: 30px;
-    }
-
     .toast {
       position: fixed;
       top: 20px;
@@ -151,19 +110,14 @@
 
   <div class="contenedor">
     <form id="votacion">
-      <label><input type="radio" name="candidato" value="reynaldo"> <img src="img/pan.png" alt="PAN" class="logo-partido"> <img src="img/reynaldo.jpg" alt="Reynaldo Aguirre Solís" class="foto"> Reynaldo Aguirre Solís (PAN)</label>
-      <label><input type="radio" name="candidato" value="juan"> <img src="img/mc.png" alt="MC" class="logo-partido"> <img src="img/juan.jpg" alt="Juan José Ruiz Hernández" class="foto"> Juan José Ruiz Hernández (MC)</label>
-      <label><input type="radio" name="candidato" value="edwing"> <img src="img/morena.png" alt="Morena" class="logo-partido"> <img src="img/edwing.jpg" alt="Edwing Eduardo González Fernández" class="foto"> Edwing Eduardo González Fernández (Morena)</label>
-      <label><input type="radio" name="candidato" value="olivia"> <img src="img/pri.png" alt="PRI" class="logo-partido"> <img src="img/olivia.jpg" alt="Olivia Estela Valera Ortega" class="foto"> Olivia Estela Valera Ortega (PRI)</label>
-      <label><input type="radio" name="candidato" value="jorge"> <img src="img/pt.png" alt="PT" class="logo-partido"> <img src="img/jorge.jpg" alt="Jorge Francisco Sisniega López" class="foto"> Jorge Francisco Sisniega López (PT)</label>
-      <label><input type="radio" name="candidato" value="otro"> <img src="img/independiente.png" alt="Independiente" class="logo-partido"> <img src="img/arturo.jpg" alt="Arturo Pereda el Niño del Pueblo" class="foto"> Arturo Pereda el hijo del Pueblo</label>
+      <label><input type="radio" name="candidato" value="reynaldo"> <img src="img/pan.png" class="logo-partido"> <img src="img/reynaldo.jpg" class="foto"> Reynaldo Aguirre Solís (PAN)</label>
+      <label><input type="radio" name="candidato" value="juan"> <img src="img/mc.png" class="logo-partido"> <img src="img/juan.jpg" class="foto"> Juan José Ruiz Hernández (MC)</label>
+      <label><input type="radio" name="candidato" value="edwing"> <img src="img/morena.png" class="logo-partido"> <img src="img/edwing.jpg" class="foto"> Edwing Eduardo González Fernández (Morena)</label>
+      <label><input type="radio" name="candidato" value="olivia"> <img src="img/pri.png" class="logo-partido"> <img src="img/olivia.jpg" class="foto"> Olivia Estela Valera Ortega (PRI)</label>
+      <label><input type="radio" name="candidato" value="jorge"> <img src="img/pt.png" class="logo-partido"> <img src="img/jorge.jpg" class="foto"> Jorge Francisco Sisniega López (PT)</label>
+      <label><input type="radio" name="candidato" value="otro"> <img src="img/independiente.png" class="logo-partido"> <img src="img/arturo.jpg" class="foto"> Arturo Pereda el hijo del Pueblo</label>
       <button type="submit">Votar</button>
     </form>
-
-    <div class="panel-resultados">
-      <div id="resultados"></div>
-      <canvas id="grafico" width="400" height="400"></canvas>
-    </div>
   </div>
 
   <div id="toast" class="toast">Gracias por votar</div>
@@ -171,120 +125,29 @@
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io({ transports: ['websocket'] });
-
     const form = document.getElementById('votacion');
-    const resultados = document.getElementById('resultados');
-    const ctx = document.getElementById('grafico').getContext('2d');
     const toast = document.getElementById('toast');
 
-    const colores = {
-      juan: '#ff8c00',
-      reynaldo: '#0066cc',
-      olivia: '#cc0000',
-      jorge: '#b71c1c',
-      edwing: '#800000',
-      otro: '#808080'
-    };
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
 
-    const nombresCompletos = {
-      juan: 'Juan José Ruiz Hernández',
-      reynaldo: 'Reynaldo Aguirre Solís',
-      olivia: 'Olivia Estela Valera Ortega',
-      jorge: 'Jorge Francisco Sisniega López',
-      edwing: 'Edwing Eduardo González Fernández',
-      otro: 'Arturo Pereda el hijo del Pueblo'
-    };
-
-    let chart;
-
-  form.addEventListener('submit', function (e) {
-  e.preventDefault();
-
-  // Verifica si ya votó
-  if (localStorage.getItem('yaVoto') === 'true') {
-    alert("Ya has votado desde este dispositivo.");
-    return;
-  }
-
-  const candidato = document.querySelector('input[name="candidato"]:checked');
-  if (candidato) {
-    socket.emit('vote', candidato.value);
-    localStorage.setItem('yaVoto', 'true'); // Marca como votado
-
-    toast.classList.add('mostrar');
-    setTimeout(() => {
-      toast.classList.remove('mostrar');
-    }, 3000);
-  } else {
-    alert("Por favor selecciona un candidato antes de votar.");
-  }
-});
-
-
-    socket.on('updateVotes', ({ votos }) => {
-      resultados.innerHTML = '';
-      const total = Object.values(votos).reduce((a, b) => a + b, 0);
-
-      const labels = [];
-      const data = [];
-      const backgroundColors = [];
-
-      const maxVotos = Math.max(...Object.values(votos));
-
-      for (let [nombre, cantidad] of Object.entries(votos)) {
-        const porcentaje = total > 0 ? ((cantidad / total) * 100).toFixed(1) : 0;
-        const color = colores[nombre] || '#000';
-        const nombreCompleto = nombresCompletos[nombre] || nombre;
-
-        const bar = document.createElement('div');
-        bar.className = 'barra';
-        if (cantidad === maxVotos && maxVotos > 0) {
-          bar.classList.add('barra-destacada');
-        }
-        bar.innerHTML = `
-          <span>${nombreCompleto}: ${porcentaje}% (${cantidad} votos)</span>
-          <div class="barra-llena" style="width: ${porcentaje}%; background-color: ${color};"></div>
-        `;
-        resultados.appendChild(bar);
-
-        labels.push(nombreCompleto);
-        data.push(cantidad);
-        backgroundColors.push(color);
+      if (localStorage.getItem('yaVoto') === 'true') {
+        alert("Ya has votado desde este dispositivo.");
+        return;
       }
 
-      if (chart) {
-        chart.data.labels = labels;
-        chart.data.datasets[0].data = data;
-        chart.data.datasets[0].backgroundColor = backgroundColors;
-        chart.update();
+      const candidato = document.querySelector('input[name="candidato"]:checked');
+      if (candidato) {
+        socket.emit('vote', candidato.value);
+        localStorage.setItem('yaVoto', 'true');
+        toast.classList.add('mostrar');
+        setTimeout(() => {
+          toast.classList.remove('mostrar');
+        }, 3000);
       } else {
-        chart = new Chart(ctx, {
-          type: 'pie',
-          data: {
-            labels: labels,
-            datasets: [{
-              data: data,
-              backgroundColor: backgroundColors
-            }]
-          },
-          options: {
-            responsive: true,
-            plugins: {
-              legend: {
-                position: 'bottom'
-              },
-              title: {
-                display: true,
-                text: 'Distribución de votos'
-              }
-            }
-          }
-        });
+        alert("Por favor selecciona un candidato antes de votar.");
       }
     });
   </script>
 </body>
 </html>
-
-
-
