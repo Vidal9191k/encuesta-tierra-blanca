@@ -86,7 +86,7 @@
     <h2>Resultados en tiempo real</h2>
     <div id="resultados"></div>
     <canvas id="grafico" width="400" height="400"></canvas>
-    <button id="resetear-btn" onclick="resetearIps()">🔄 Resetear IPs (Solo pruebas)</button>
+   <button onclick="resetearIPs()">Resetear IPs (solo pruebas)</button>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
@@ -114,6 +114,15 @@
         })
         .catch(() => alert('Fallo la conexión con el servidor.'));
     }
+
+function resetearIPs() {
+  fetch('/admin-resetear-ips')
+    .then(response => response.text())
+    .then(msg => alert(msg))
+    .catch(err => alert("Error al resetear IPs"));
+}
+
+
 
     const socket = io({ transports: ['websocket'] });
     const resultados = document.getElementById('resultados');
