@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Resultados - Encuesta Privada</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background-color: #f4f4f4;
+    }
+
+    #login {
+      max-width: 300px;
+      margin: 100px auto;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    #panel-resultados {
+      display: none;
+      max-width: 700px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+    }
+
+    canvas {
+      margin-top: 20px;
+    }
+
+    input[type="password"] {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+
+    button {
+      padding: 10px 20px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .barra {
+      margin-bottom: 20px;
+    }
+
+    .barra span {
+      font-weight: bold;
+    }
+
+    .barra-llena {
+      height: 20px;
+      border-radius: 5px;
+      margin-top: 5px;
+    }
+
+    .barra-destacada {
+      outline: 3px solid gold;
+      padding: 5px;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div id="login">
+    <h3>Acceso restringido</h3>
+    <input type="password" id="clave" placeholder="Ingresa la contraseña">
+    <button onclick="verificar()">Entrar</button>
+    <p id="error" style="color:red;"></p>
+  </div>
+
+  <div id="panel-resultados">
+    <h2>Resultados en tiempo real</h2>
+    <div id="resultados"></div>
+    <canvas id="grafico" width="400" height="400"></canvas>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const PASSWORD = "miclave2025"; // ← CAMBIA esta clave si quieres otra
+
+    function verificar() {
+      const clave = document.getElementById('clave').value;
+      if (clave === PASSWORD) {
+        document.getElementById('login').style.display = 'none';
+        document.getElementById('panel-resultados').style.display = 'block';
+      } else {
+        document.getElementById('error').textContent = 'Contraseña incorrecta';
+      }
+    }
+
+    const socket = io({ transports: ['websocket'] });
+    const resultados = document.getElementById('resultados');
+    const ctx = document.getElementById('grafico').getContext('2d');
+
+    const colores = {
+      juan: '#ff8c00',
+      reynaldo: '#0066cc',
+      olivia: '#cc0000',
+      jorge: '#b71c1c',
+      edwing: '#800000',
+      otro: '#808080'
+    };
+
+    const nombresCompletos = {
+      juan: 'Juan José Ruiz Hernández',
+      reynaldo: 'Reynaldo Aguirre Solís',
+      olivia: 'Olivia Estela Valera Ortega',
+      jorge: 'Jorge Francisco Sisniega López',
+      edwing: 'Edwing Eduardo González Fernández',
+      otro: 'Arturo Pereda el hijo del Pueblo'
+    };
+
+    let chart;
+
+    socket.on('updateVotes', ({ votos }) => {
+      resultados.innerHTML = '';
+      const total = Object.values(votos).reduce((a, b) => a + b, 0);
+      const labels = [];
+      const data = [];
+      const backgroundColors = [];
+      const maxVotos = Math.max(...Object.values(votos));
+
+      for (let [nombre, cantidad] of Object.entries(votos)) {
+        const porcentaje = total > 0 ? ((cantidad / total) * 100).toFixed(1) : 0;
+        const color = colores[nombre] || '#000';
+        const nombreCompleto = nombresCompletos[nombre] || nombre;
+
+        const bar = document.createElement('div');
+        bar.className = 'barra';
+        if (cantidad === maxVotos && maxVotos > 0) {
+          bar.classList.add('barra-destacada');
+        }
+        bar.innerHTML = `
+          <span>${nombreCompleto}: ${porcentaje}% (${cantidad} votos)</span>
+          <div class="barra-llena" style="width: ${porcentaje}%; background-color: ${color};"></div>
+        `;
+        resultados.appendChild(bar);
+
+        labels.push(nombreCompleto);
+        data.push(cantidad);
+        backgroundColors.push(color);
+      }
+
+      if (chart) {
+        chart.data.labels = labels;
+        chart.data.datasets[0].data = data;
+        chart.data.datasets[0].backgroundColor = backgroundColors;
+        chart.update();
+      } else {
+        chart = new Chart(ctx, {
+          type: 'pie',
+          data: {
+            labels: labels,
+            datasets: [{
+              data: data,
+              backgroundColor: backgroundColors
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: {
+                position: 'bottom'
+              },
+              title: {
+                display: true,
+                text: 'Distribución de votos'
+              }
+            }
+          }
+        });
+      }
+    });
+  </script>
+</body>
+</html>
+

@@ -65,7 +65,12 @@ io.on('connection', (socket) => {
     }
   });
 });
+const path = require('path');
 
+// Ruta secreta solo para ti (por ejemplo: /admin-votos-2025)
+app.get('/admin-votos-2025', (req, res) => {
+  res.sendFile(path.join(__dirname, 'privado', 'resultados.html'));
+});
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Servidor escuchando en el puerto ${PORT}`);
