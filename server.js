@@ -11,13 +11,15 @@ const io = new Server(server);
 
 // Middleware para detectar IP del cliente
 app.use(requestIp.mw());
+
+// Servir archivos estáticos desde "public"
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Archivos para persistencia
 const votosPath = path.join(__dirname, 'votos.json');
 const ipsPath = path.join(__dirname, 'ips.json');
 
-// Inicializar datos si no existen
+// Inicializar votos si no existen
 if (!fs.existsSync(votosPath)) {
   fs.writeFileSync(votosPath, JSON.stringify({
     reynaldo: 0,
@@ -29,19 +31,18 @@ if (!fs.existsSync(votosPath)) {
   }, null, 2));
 }
 
+// Inicializar lista de IPs si no existe
 if (!fs.existsSync(ipsPath)) {
   fs.writeFileSync(ipsPath, JSON.stringify([]));
 }
 
+// Funciones para leer y guardar
 const getVotos = () => JSON.parse(fs.readFileSync(votosPath));
 const getIps = () => new Set(JSON.parse(fs.readFileSync(ipsPath)));
+const guardarVotos = (votos) => fs.writeFileSync(votosPath, JSON.stringify(votos, null, 2));
+const guardarIps = (ipsSet) => fs.writeFileSync(ipsPath, JSON.stringify([...ipsSet], null, 2));
 
-const guardarVotos = (votos) =>
-  fs.writeFileSync(votosPath, JSON.stringify(votos, null, 2));
-const guardarIps = (ipsSet) =>
-  fs.writeFileSync(ipsPath, JSON.stringify([...ipsSet], null, 2));
-
-// Socket.IO para votar
+// Manejo de socket
 io.on('connection', (socket) => {
   const ip = socket.handshake.headers['x-forwarded-for'] || socket.handshake.address;
   const votos = getVotos();
@@ -67,11 +68,12 @@ io.on('connection', (socket) => {
   });
 });
 
-// ✅ Ruta secreta para ver resultados (asegúrate de que el archivo esté ahí)
+// Ruta protegida (sin contraseña aún)
 app.get('/admin-votos-2025', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'privado', 'resultados.html'));
 });
 
+// Iniciar servidor
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Servidor escuchando en el puerto ${PORT}`);
