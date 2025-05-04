@@ -41,6 +41,7 @@ const guardarVotos = (votos) =>
 const guardarIps = (ipsSet) =>
   fs.writeFileSync(ipsPath, JSON.stringify([...ipsSet], null, 2));
 
+// Socket.IO para votar
 io.on('connection', (socket) => {
   const ip = socket.handshake.headers['x-forwarded-for'] || socket.handshake.address;
   const votos = getVotos();
@@ -65,14 +66,15 @@ io.on('connection', (socket) => {
     }
   });
 });
-const path = require('path');
 
-// Ruta secreta solo para ti (por ejemplo: /admin-votos-2025)
+// ✅ Ruta secreta para ver resultados (asegúrate de que el archivo esté ahí)
 app.get('/admin-votos-2025', (req, res) => {
-  res.sendFile(path.join(__dirname, 'privado', 'resultados.html'));
+  res.sendFile(path.join(__dirname, 'public', 'privado', 'resultados.html'));
 });
+
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Servidor escuchando en el puerto ${PORT}`);
 });
+
 
