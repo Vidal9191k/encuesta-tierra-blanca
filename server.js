@@ -9,15 +9,17 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+// Middleware IP
 app.use(requestIp.mw());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Archivos para persistencia
+// Rutas de archivos
 const votosPath = path.join(__dirname, 'votos.json');
 const ipsPath = path.join(__dirname, 'ips.json');
 const fingerprintsPath = path.join(__dirname, 'fingerprints.json');
+const votosPorIpPath = path.join(__dirname, 'votos_por_ip.json');
 
-// Inicializar votos
+// Inicializar archivos si no existen
 if (!fs.existsSync(votosPath)) {
   fs.writeFileSync(votosPath, JSON.stringify({
     reynaldo: 0,
@@ -29,18 +31,20 @@ if (!fs.existsSync(votosPath)) {
   }, null, 2));
 }
 
-// Inicializar lista de IPs y fingerprints
 if (!fs.existsSync(ipsPath)) fs.writeFileSync(ipsPath, JSON.stringify([]));
 if (!fs.existsSync(fingerprintsPath)) fs.writeFileSync(fingerprintsPath, JSON.stringify([]));
+if (!fs.existsSync(votosPorIpPath)) fs.writeFileSync(votosPorIpPath, JSON.stringify({}));
 
-// Funciones
+// Funciones auxiliares
 const getVotos = () => JSON.parse(fs.readFileSync(votosPath));
 const getIps = () => new Set(JSON.parse(fs.readFileSync(ipsPath)));
 const getFingerprints = () => new Set(JSON.parse(fs.readFileSync(fingerprintsPath)));
+const getVotosPorIp = () => JSON.parse(fs.readFileSync(votosPorIpPath));
 
 const guardarVotos = (votos) => fs.writeFileSync(votosPath, JSON.stringify(votos, null, 2));
 const guardarIps = (ipsSet) => fs.writeFileSync(ipsPath, JSON.stringify([...ipsSet], null, 2));
 const guardarFingerprints = (fpSet) => fs.writeFileSync(fingerprintsPath, JSON.stringify([...fpSet], null, 2));
+const guardarVotosPorIp = (data) => fs.writeFileSync(votosPorIpPath, JSON.stringify(data, null, 2));
 
 // Socket
 io.on('connection', (socket) => {
@@ -48,12 +52,18 @@ io.on('connection', (socket) => {
   const votos = getVotos();
   const ips = getIps();
   const fingerprints = getFingerprints();
+  const votosPorIp = getVotosPorIp();
+  const hoy = new Date().toISOString().slice(0, 10);
 
   socket.emit('updateVotes', { votos });
 
   socket.on('vote', ({ candidato, fingerprint }) => {
-    if (ips.has(ip) || fingerprints.has(fingerprint)) {
-      console.log(`Voto bloqueado. IP: ${ip}, Fingerprint: ${fingerprint}`);
+    if (
+      ips.has(ip) ||
+      fingerprints.has(fingerprint) ||
+      votosPorIp[ip] === hoy
+    ) {
+      console.log(`❌ Voto bloqueado. IP: ${ip}, FP: ${fingerprint}, Fecha: ${hoy}`);
       return;
     }
 
@@ -61,31 +71,33 @@ io.on('connection', (socket) => {
       votos[candidato]++;
       ips.add(ip);
       fingerprints.add(fingerprint);
+      votosPorIp[ip] = hoy;
 
       guardarVotos(votos);
       guardarIps(ips);
       guardarFingerprints(fingerprints);
+      guardarVotosPorIp(votosPorIp);
 
       io.emit('updateVotes', { votos });
+      console.log(`✅ Voto registrado. Candidato: ${candidato}, IP: ${ip}`);
     }
   });
 });
 
-// Resultados
+// Rutas
 app.get('/admin-votos-2025', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'privado', 'resultados.html'));
 });
 
-// Reset
 app.get('/admin-resetear-ips', (req, res) => {
   fs.writeFileSync(ipsPath, JSON.stringify([]));
   fs.writeFileSync(fingerprintsPath, JSON.stringify([]));
-  res.send('IPs y fingerprints reseteadas.');
+  fs.writeFileSync(votosPorIpPath, JSON.stringify({}));
+  res.send('IPs, fingerprints y bloqueos por día han sido reseteados.');
 });
 
 // Iniciar servidor
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  console.log(`Servidor escuchando en el puerto ${PORT}`);
+  console.log(`🚀 Servidor escuchando en el puerto ${PORT}`);
 });
-
