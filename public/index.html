@@ -1,17 +1,10 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<!-- Metadatos para Facebook -->
-<meta property="og:title" content="Encuesta Tierra Blanca 2025" />
-<meta property="og:description" content="Vota por tu candidato favorito para la alcaldía de Tierra Blanca, Veracruz. ¡Participa!" />
-<meta property="og:image" content="https://encuesta-tierra-blanca.onrender.com/img/portada.jpg" />
-<meta property="og:url" content="https://encuesta-tierra-blanca.onrender.com/" />
-<meta property="og:type" content="website" />
-
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Encuesta Tierra Blanca</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -58,39 +51,7 @@
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
       min-width: 300px;
       max-width: 500px;
-      width: 100%;
       position: relative;
-    }
-
-    .acciones-superiores {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-      flex-wrap: wrap;
-    }
-
-    .boton-votar {
-      padding: 10px 20px;
-      font-size: 16px;
-      background-color: #28a745;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      margin: 5px 0;
-    }
-
-    .compartir {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-    }
-
-    .compartir img {
-      cursor: pointer;
-      width: 36px;
-      height: 36px;
     }
 
     #votacion label {
@@ -110,6 +71,29 @@
       width: 180px;
       object-fit: cover;
       border-radius: 5px;
+    }
+
+    .acciones {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      gap: 10px;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #28a745;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .compartir a img {
+      vertical-align: middle;
+      cursor: pointer;
     }
 
     .toast {
@@ -137,12 +121,15 @@
 
   <div class="contenedor">
     <form id="votacion">
-      <div class="acciones-superiores">
-        <button type="submit" class="boton-votar">Votar</button>
+      <div class="acciones">
+        <button type="submit">Votar</button>
         <div class="compartir">
-          <span>Compartir:</span>
-          <img src="img/whatsapp.png" alt="Compartir en WhatsApp" onclick="compartirWhatsapp()">
-          <img src="img/facebook.png" alt="Compartir en Facebook" onclick="compartirFacebook()">
+          <a href="https://wa.me/?text=Participa%20en%20esta%20encuesta:%20https://encuesta-tierra-blanca.onrender.com" target="_blank" style="margin-right: 5px;">
+            <img src="img/whatsapp.png" alt="Compartir en WhatsApp" width="40" />
+          </a>
+          <a id="facebook-share" href="#">
+            <img src="img/facebook.png" alt="Compartir en Facebook" width="40" />
+          </a>
         </div>
       </div>
 
@@ -163,7 +150,6 @@
     const socket = io({ transports: ['websocket'] });
     const form = document.getElementById('votacion');
     const toast = document.getElementById('toast');
-
     let visitorId = null;
 
     FingerprintJS.load().then(fp => {
@@ -174,7 +160,6 @@
 
     form.addEventListener('submit', function (e) {
       e.preventDefault();
-
       if (!visitorId) {
         alert("Error al identificar tu navegador. Intenta de nuevo.");
         return;
@@ -191,7 +176,6 @@
           candidato: candidato.value,
           fingerprint: visitorId
         });
-
         localStorage.setItem('yaVoto', 'true');
         toast.classList.add('mostrar');
         setTimeout(() => {
@@ -202,22 +186,24 @@
       }
     });
 
-    function abrirPopup(url) {
-      const ancho = 600;
-      const alto = 400;
-      const izquierda = (window.innerWidth - ancho) / 2;
-      const arriba = (window.innerHeight - alto) / 2;
-      window.open(url, 'popup', `width=${ancho},height=${alto},top=${arriba},left=${izquierda}`);
-    }
+    // Facebook share que intenta abrir app y si no, abre web
+    document.getElementById('facebook-share').addEventListener('click', function (e) {
+      e.preventDefault();
+      const url = "https://encuesta-tierra-blanca.onrender.com";
+      const fbAppUrl = `fb://facewebmodal/f?href=${encodeURIComponent(url)}`;
+      const fbWebUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
-    function compartirWhatsapp() {
-      const texto = encodeURIComponent("Participa en esta encuesta: https://encuesta-tierra-blanca.onrender.com/");
-      abrirPopup(`https://wa.me/?text=${texto}`);
-    }
-
-    function compartirFacebook() {
-      abrirPopup(`https://www.facebook.com/sharer/sharer.php?u=https://encuesta-tierra-blanca.onrender.com/`);
-    }
+      if (isMobile) {
+        window.location.href = fbAppUrl;
+        setTimeout(() => {
+          window.open(fbWebUrl, "_blank");
+        }, 2000);
+      } else {
+        window.open(fbWebUrl, "_blank");
+      }
+    });
   </script>
 </body>
 </html>
+
