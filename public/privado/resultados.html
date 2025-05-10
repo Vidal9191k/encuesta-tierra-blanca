@@ -120,7 +120,7 @@
 
     let chart;
 
-    socket.on('updateVotes', (votos) => {
+    socket.on('updateVotes', ({ votos }) => {
       resultados.innerHTML = '';
       const total = Object.values(votos).reduce((a, b) => a + b, 0);
       const labels = [];

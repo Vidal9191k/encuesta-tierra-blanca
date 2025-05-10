@@ -72,7 +72,6 @@ io.on('connection', (socket) => {
   socket.emit('updateVotes', { votos });
 
   socket.on('vote', ({ candidato, fingerprint }) => {
-    // Verificar que no se haya votado desde esta IP o fingerprint hoy
     if (
       ips.has(ip) ||
       fingerprints.has(fingerprint) ||
@@ -82,14 +81,12 @@ io.on('connection', (socket) => {
       return;
     }
 
-    // Asegurarse de que el candidato sea válido
     if (typeof candidato === 'string' && votos.hasOwnProperty(candidato)) {
       votos[candidato]++;
       ips.add(ip);
       fingerprints.add(fingerprint);
       votosPorIp[ip] = hoy;
 
-      // Guardar votos solo cuando haya un cambio
       guardarVotos(votos);
       guardarIps(ips);
       guardarFingerprints(fingerprints);
@@ -118,3 +115,4 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`🚀 Servidor escuchando en el puerto ${PORT}`);
 });
+
