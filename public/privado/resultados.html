@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <title>Resultados - Encuesta Privada</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -67,11 +68,6 @@
       padding: 5px;
       border-radius: 8px;
     }
-
-    #resetear-btn {
-      background-color: red;
-      margin-top: 20px;
-    }
   </style>
 </head>
 <body>
@@ -86,12 +82,11 @@
     <h2>Resultados en tiempo real</h2>
     <div id="resultados"></div>
     <canvas id="grafico" width="400" height="400"></canvas>
-   <button onclick="resetearIPs()">Resetear IPs (solo pruebas)</button>
+    <button onclick="resetearIPs()">Resetear IPs (solo pruebas)</button>
   </div>
 
-  <script src="/socket.io/socket.io.js"></script>
   <script>
-    const PASSWORD = "miclave2025"; // ← CAMBIA esta clave si lo deseas
+    const PASSWORD = "miclave2025";
 
     function verificar() {
       const clave = document.getElementById('clave').value;
@@ -103,28 +98,14 @@
       }
     }
 
-    function resetearIps() {
-      fetch('/resetear-ips', { method: 'POST' })
-        .then(res => {
-          if (res.ok) {
-            alert('IPs reseteadas correctamente.');
-          } else {
-            alert('Error al resetear IPs.');
-          }
-        })
-        .catch(() => alert('Fallo la conexión con el servidor.'));
+    function resetearIPs() {
+      fetch('/admin-resetear-ips')
+        .then(response => response.text())
+        .then(msg => alert(msg))
+        .catch(err => alert("Error al resetear IPs"));
     }
 
-function resetearIPs() {
-  fetch('/admin-resetear-ips')
-    .then(response => response.text())
-    .then(msg => alert(msg))
-    .catch(err => alert("Error al resetear IPs"));
-}
-
-
-
-    const socket = io({ transports: ['websocket'] });
+    const socket = io();
     const resultados = document.getElementById('resultados');
     const ctx = document.getElementById('grafico').getContext('2d');
 
@@ -137,42 +118,28 @@ function resetearIPs() {
       otro: '#808080'
     };
 
-    const nombresCompletos = {
-      juan: 'Juan José Ruiz Hernández',
-      reynaldo: 'Reynaldo Aguirre Solís',
-      olivia: 'Olivia Estela Valera Ortega',
-      jorge: 'Jorge Francisco Sisniega López',
-      edwing: 'Edwing Eduardo González Fernández',
-      otro: 'Arturo Pereda el hijo del Pueblo'
-    };
-
     let chart;
 
-    socket.on('updateVotes', ({ votos }) => {
+    socket.on('updateVotes', (votos) => {
       resultados.innerHTML = '';
       const total = Object.values(votos).reduce((a, b) => a + b, 0);
       const labels = [];
       const data = [];
       const backgroundColors = [];
-      const maxVotos = Math.max(...Object.values(votos));
 
       for (let [nombre, cantidad] of Object.entries(votos)) {
         const porcentaje = total > 0 ? ((cantidad / total) * 100).toFixed(1) : 0;
         const color = colores[nombre] || '#000';
-        const nombreCompleto = nombresCompletos[nombre] || nombre;
 
         const bar = document.createElement('div');
         bar.className = 'barra';
-        if (cantidad === maxVotos && maxVotos > 0) {
-          bar.classList.add('barra-destacada');
-        }
         bar.innerHTML = `
-          <span>${nombreCompleto}: ${porcentaje}% (${cantidad} votos)</span>
+          <span>${nombre.toUpperCase()}: ${porcentaje}% (${cantidad} votos)</span>
           <div class="barra-llena" style="width: ${porcentaje}%; background-color: ${color};"></div>
         `;
         resultados.appendChild(bar);
 
-        labels.push(nombreCompleto);
+        labels.push(nombre.toUpperCase());
         data.push(cantidad);
         backgroundColors.push(color);
       }
