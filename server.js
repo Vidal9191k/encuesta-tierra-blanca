@@ -19,71 +19,60 @@ const ipsPath = path.join(__dirname, 'ips.json');
 const fingerprintsPath = path.join(__dirname, 'fingerprints.json');
 const votosPorIpPath = path.join(__dirname, 'votos_por_ip.json');
 
-// Inicializar archivos si no existen
-if (!fs.existsSync(votosPath)) {
-  fs.writeFileSync(votosPath, JSON.stringify({
-    reynaldo: 0,
-    juan: 0,
-    edwing: 0,
-    olivia: 0,
-    jorge: 0,
-    otro: 0
-  }, null, 2));
-}
+// Variables en memoria
+let votos = {
+  reynaldo: 0,
+  juan: 0,
+  edwing: 0,
+  olivia: 0,
+  jorge: 0,
+  otro: 0,
+};
+let ips = new Set();
+let fingerprints = new Set();
+let votosPorIp = {};
 
-if (!fs.existsSync(ipsPath)) fs.writeFileSync(ipsPath, JSON.stringify([]));
-if (!fs.existsSync(fingerprintsPath)) fs.writeFileSync(fingerprintsPath, JSON.stringify([]));
-if (!fs.existsSync(votosPorIpPath)) fs.writeFileSync(votosPorIpPath, JSON.stringify({}));
+// Cargar datos al iniciar el servidor
+if (fs.existsSync(votosPath)) votos = JSON.parse(fs.readFileSync(votosPath));
+if (fs.existsSync(ipsPath)) ips = new Set(JSON.parse(fs.readFileSync(ipsPath)));
+if (fs.existsSync(fingerprintsPath)) fingerprints = new Set(JSON.parse(fs.readFileSync(fingerprintsPath)));
+if (fs.existsSync(votosPorIpPath)) votosPorIp = JSON.parse(fs.readFileSync(votosPorIpPath));
 
-// Funciones para obtener y guardar datos
-const getVotos = () => JSON.parse(fs.readFileSync(votosPath));
-const getIps = () => new Set(JSON.parse(fs.readFileSync(ipsPath)));
-const getFingerprints = () => new Set(JSON.parse(fs.readFileSync(fingerprintsPath)));
-const getVotosPorIp = () => JSON.parse(fs.readFileSync(votosPorIpPath));
+// Guardado seguro al cerrar el servidor
+const guardarDatos = () => {
+  fs.writeFileSync(votosPath, JSON.stringify(votos, null, 2));
+  fs.writeFileSync(ipsPath, JSON.stringify([...ips], null, 2));
+  fs.writeFileSync(fingerprintsPath, JSON.stringify([...fingerprints], null, 2));
+  fs.writeFileSync(votosPorIpPath, JSON.stringify(votosPorIp, null, 2));
+};
 
-const guardarVotos = (votos) => fs.writeFileSync(votosPath, JSON.stringify(votos, null, 2));
-const guardarIps = (ipsSet) => fs.writeFileSync(ipsPath, JSON.stringify([...ipsSet], null, 2));
-const guardarFingerprints = (fpSet) => fs.writeFileSync(fingerprintsPath, JSON.stringify([...fpSet], null, 2));
-const guardarVotosPorIp = (data) => fs.writeFileSync(votosPorIpPath, JSON.stringify(data, null, 2));
-
-// Cargar votos al iniciar el servidor (evita reseteo en cada conexión)
-let votos = getVotos();
+process.on('SIGTERM', guardarDatos);
+process.on('SIGINT', guardarDatos);
 
 // Socket
 io.on('connection', (socket) => {
   const ip = socket.handshake.headers['x-forwarded-for'] || socket.handshake.address;
-  const ips = getIps();
-  const fingerprints = getFingerprints();
-  const votosPorIp = getVotosPorIp();
   const hoy = new Date().toISOString().slice(0, 10);
 
-  // Emitir los votos actuales al cliente
-  socket.emit('updateVotes', votos);
+  // Emitir votos al cliente cuando se conecta
+  socket.emit('updateVotes', { votos });
 
   socket.on('vote', ({ candidato, fingerprint }) => {
-    if (
-      ips.has(ip) ||
-      fingerprints.has(fingerprint) ||
-      votosPorIp[ip] === hoy
-    ) {
+    // Verificar que no se haya votado desde esta IP o fingerprint hoy
+    if (ips.has(ip) || fingerprints.has(fingerprint) || votosPorIp[ip] === hoy) {
       console.log(`❌ Voto bloqueado. IP: ${ip}, FP: ${fingerprint}, Fecha: ${hoy}`);
       return;
     }
 
+    // Asegurarse de que el candidato sea válido
     if (typeof candidato === 'string' && votos.hasOwnProperty(candidato)) {
       votos[candidato]++;
       ips.add(ip);
       fingerprints.add(fingerprint);
       votosPorIp[ip] = hoy;
 
-      // Guardar los cambios en los archivos
-      guardarVotos(votos);
-      guardarIps(ips);
-      guardarFingerprints(fingerprints);
-      guardarVotosPorIp(votosPorIp);
-
-      // Emitir actualización a todos los clientes
-      io.emit('updateVotes', votos);
+      // Emitir actualización en tiempo real
+      io.emit('updateVotes', { votos });
       console.log(`✅ Voto registrado. Candidato: ${candidato}, IP: ${ip}`);
     }
   });
@@ -91,13 +80,15 @@ io.on('connection', (socket) => {
 
 // Rutas
 app.get('/admin-votos-2025', (req, res) => {
+  console.log("Enviando resultados al panel de administración");
   res.sendFile(path.join(__dirname, 'public', 'privado', 'resultados.html'));
 });
 
-app.post('/admin-resetear-ips', (req, res) => {
-  fs.writeFileSync(ipsPath, JSON.stringify([]));
-  fs.writeFileSync(fingerprintsPath, JSON.stringify([]));
-  fs.writeFileSync(votosPorIpPath, JSON.stringify({}));
+app.get('/admin-resetear-ips', (req, res) => {
+  ips = new Set();
+  fingerprints = new Set();
+  votosPorIp = {};
+  console.log('IPs, fingerprints y bloqueos por día han sido reseteados.');
   res.send('IPs, fingerprints y bloqueos por día han sido reseteados.');
 });
 
